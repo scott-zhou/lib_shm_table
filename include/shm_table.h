@@ -8,6 +8,9 @@
 //
 #ifndef _LIB_SHM_TABLE_H_
 #define _LIB_SHM_TABLE_H_
+
+#include <string>
+
 namespace lib_shm_table {
 
 // Template class for table in shared memory. Sample usage:
@@ -37,33 +40,41 @@ class Table{
         kSort = 1
     };
     enum KeyType{
-        kStrKeyFromStrPlusInt = 0,//(str+int)
-        kStrKeyFromIntPlusStr,//(int+str)
-        kStrKeyFromStrPlusStr,//(str+str)
-        kStrKeyFromIntPlusInt,//(int+int)
-        kStrKeyFromOnlyStr,   //(str), only have first key field
-        kStrKeyFromOnlyInt,   //(int), only have first key field
-        kIntKeyFromOnlyInt,   //(int), only have first key field
-        kBitKeyOneField,      //Only use first field bits
-        kBitKeyTwoField       //Use two fields bits
+        kKeyTypeInt,
+        kKeyTypeLong,
+        kKeyTypeString,
     };
 #consts
 public:
-    Table(const char *ipc_path_name,int ipcid,int operator_flag = 0666);
+    // Construct
+    // Parameters will be passed to POSIX ftok() and shmget() function.
+    // They have exact same meaning with POSIX definition.
+    // Please refer to POSIX api help page for details.
+    Table(const char *ipc_pathname,int ipc_proj_id,int shmflag = 0600);
+
+    // Destruct
     ~Table();
 
-    //
+    // Create shared memory and table data struct.
+    // Parameters:
+    //     table_capacity, the max number of elements in table
+    //     num_of_hashkey, How many hash keys will be created in table, default 0
+    //     num_of_sortkey, How many sort keys will be created in table, default 0
+    // NOTES: Keys (if exist) must be created (use function addKey) immediately
+    //        after table creatation.
     CreateResult create(int table_capacity,int num_of_hashkey = 0,int num_of_sortkey = 0);
 
-    //
-    void addKey(int keyid,
-                int field_1_offset,
-                int field_1_length,
-                int field_2_offset,
-                int field_2_length,
-                SearchMethod search_method,
-                KeyType key_type,
-                const char *key_format="");
+    // The following addXxxKey functions are almost same function.
+    // The only different is they are for different key types.
+    // They will add a key to table and return true when success.
+    // For each type of key (hash and sort), ID range is 0 ~ (max-1)
+    // NOTES: Again, Keys must be created immediately after table creatation.
+    bool addIntKey(SearchMethod search_method, int key_id,
+                   int (*key_generator_func) (const T&));
+    bool addLongKey(SearchMethod search_method, int key_id,
+                    long (*key_generator_func) (const T&));
+    bool addStringKey(SearchMethod search_method, int key_id,
+                      std::string (*key_generator_func) (const T&));
 
     // Connect table to shared memory
     // Return true if succeed
