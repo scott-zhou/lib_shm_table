@@ -9,7 +9,7 @@
 #ifndef _LIB_SHM_TABLE_H_
 #define _LIB_SHM_TABLE_H_
 
-#include <string>
+#include <vector>
 
 namespace lib_shm_table {
 
@@ -21,7 +21,7 @@ namespace lib_shm_table {
 //    };
 //    lib_shm_table::Table<OwnStruct> OwnTable;
 //    OwnTable myTable("/tmp/file", 0);
-//    myTable.create(100000, 1, 0)
+//    myTable.create(100000)
 //    myTable.connect();
 //    OwnStruct element;
 //    element.??? = ???
@@ -41,10 +41,28 @@ class Table{
     };
     enum KeyType{
         kKeyTypeInt,
+        kKeyTypeUnsignedInt,
         kKeyTypeLong,
-        kKeyTypeString,
+        kKeyTypeUnsignedLong,
+        kKeyTypeString
+    };
+    struct KeyComponent {
+        KeyType type;
+        int offset;
+        int length;
+    };
+    // There are some rules for create key.
+    // I will try to document it latter.
+    // TODO: Documentation about how to use Key.
+    struct Key {
+        KeyType type;
+        SearchMethod method;
+        int numOfKeyComponent; // Available range: 1-2
+        KeyComponent components[2];
+        char format[kMaxLenKeyFormat];
     };
 #consts
+    static const kMaxLenKeyFormat = 32;
 public:
     // Construct
     // Parameters will be passed to POSIX ftok() and shmget() function.
@@ -58,23 +76,13 @@ public:
     // Create shared memory and table data struct.
     // Parameters:
     //     table_capacity, the max number of elements in table
-    //     num_of_hashkey, How many hash keys will be created in table, default 0
-    //     num_of_sortkey, How many sort keys will be created in table, default 0
+    //     hashKeys, A list of hash keys in table, default no hash key
+    //     sortKeys, A list of sort keys in table, default no sort key
     // NOTES: Keys (if exist) must be created (use function addKey) immediately
     //        after table creatation.
-    CreateResult create(int table_capacity,int num_of_hashkey = 0,int num_of_sortkey = 0);
-
-    // The following addXxxKey functions are almost same function.
-    // The only different is they are for different key types.
-    // They will add a key to table and return true when success.
-    // For each type of key (hash and sort), ID range is 0 ~ (max-1)
-    // NOTES: Again, Keys must be created immediately after table creatation.
-    bool addIntKey(SearchMethod search_method, int key_id,
-                   int (*key_generator_func) (const T&));
-    bool addLongKey(SearchMethod search_method, int key_id,
-                    long (*key_generator_func) (const T&));
-    bool addStringKey(SearchMethod search_method, int key_id,
-                      std::string (*key_generator_func) (const T&));
+    CreateResult create(int table_capacity,
+                        const std::vector<Key> & hashKeys = std::vector<Key>(),
+                        const std::vector<Key> & sortKeys = std::vector<Key>());
 
     // Connect table to shared memory
     // Return true if succeed
