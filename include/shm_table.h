@@ -62,7 +62,7 @@ class Table{
         char format[kMaxLenKeyFormat];
     };
 #consts
-    static const kMaxLenKeyFormat = 32;
+    static const unsigned int kMaxLenKeyFormat = 32;
 public:
     // Construct
     // Parameters will be passed to POSIX ftok() and shmget() function.
@@ -88,6 +88,9 @@ public:
     // Return true if succeed
     bool connect();
 
+    // Return if the instance is connected to shared memory or not.
+    bool isConnected();
+
     // Detach table from shared memory
     // Return true if succeed
     bool detach();
@@ -99,7 +102,35 @@ public:
     bool isUseLock();
 
 private:
+    std::string ipc_pathname_;
+    int ipc_proj_id_;
+    int shmflag_;
 };
+
+template<class T>
+Table<T>::Table(const char *ipc_pathname,int ipc_proj_id,int shmflag /*= 0600*/) :
+    ipc_pathname_(ipc_pathname),
+    ipc_proj_id_(ipc_proj_id),
+    shmflag_(shmflag)
+{
+}
+
+template<class T>
+Table<T>::~Table()
+{
+    if(isConnected()) {
+        detach();
+    }
+}
+
+template<class T>
+CreateResult Table<T>::create(int table_capacity,
+                              const std::vector<Key> & hashKeys /*= std::vector<Key>()*/,
+                              const std::vector<Key> & sortKeys /*= std::vector<Key>()*/)
+{
+    CreateResult result = kSuccess;
+    return result;
+}
 
 } //namespace lib_shm_table
 #endif // LIB_SHM_TABLE_H_
