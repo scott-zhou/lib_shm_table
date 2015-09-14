@@ -10,6 +10,8 @@
 #define _LIB_SHM_TABLE_H_
 
 #include <vector>
+#include <string>
+#include "shmt.h"
 
 namespace lib_shm_table {
 
@@ -35,34 +37,9 @@ class Table{
         kSuccess = 1,
         kExisted = 2
     };
-    enum SearchMethod{
-        kHash = 0,
-        kSort = 1
-    };
-    enum KeyType{
-        kKeyTypeInt,
-        kKeyTypeUnsignedInt,
-        kKeyTypeLong,
-        kKeyTypeUnsignedLong,
-        kKeyTypeString
-    };
-    struct KeyComponent {
-        KeyType type;
-        int offset;
-        int length;
-    };
-    // There are some rules for create key.
-    // I will try to document it latter.
-    // TODO: Documentation about how to use Key.
-    struct Key {
-        KeyType type;
-        SearchMethod method;
-        int numOfKeyComponent; // Available range: 1-2
-        KeyComponent components[2];
-        char format[kMaxLenKeyFormat];
-    };
+
 #consts
-    static const unsigned int kMaxLenKeyFormat = 32;
+
 public:
     // Construct
     // Parameters will be passed to POSIX ftok() and shmget() function.
@@ -101,6 +78,9 @@ public:
     // Returns true if the table use lock to protect data save for multi thread(process)
     bool isUseLock();
 
+    // Return the size for shared memory
+    static int calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey);
+
 private:
     std::string ipc_pathname_;
     int ipc_proj_id_;
@@ -129,7 +109,29 @@ CreateResult Table<T>::create(int table_capacity,
                               const std::vector<Key> & sortKeys /*= std::vector<Key>()*/)
 {
     CreateResult result = kSuccess;
+    int size = calculateSize(table_capacity, hashKeys.size(), sortKeys.size());
+    int r = create_shm(ipc_pathname_, ipc_proj_id_, size);
+    switch (r) {
+        case 0:
+            result = kFail;
+            break;
+        case 1:
+            result = kSuccess;
+            break;
+        case 2:
+            result = kExisted;
+            break;
+        default:
+            result = kFail;
+            break;
+    }
     return result;
+}
+
+template<class T>
+int Table<T>::calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey)
+{
+    return calculate_shm_size(table_capacity, num_of_hashkey, num_of_sortkey);
 }
 
 } //namespace lib_shm_table
