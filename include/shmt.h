@@ -1,7 +1,8 @@
 #ifndef _LIB_SHMT_H_
 #define _LIB_SHMT_H_
 
-#define MAX_LEN_KEY_FORMAT 32
+#define MAX_LEN_KEY_FORMAT  32
+#define SEM_NUM_FOR_RWLOCK  2
 
 struct ShmDescriptor{
     int shm_size;
@@ -56,8 +57,11 @@ struct DoublyLinkedListNode {
 
 int get_hash_prime_number(int);
 int calculate_shm_size(int table_capacity, int num_of_hashkey, int num_of_sortkey);
+bool shm_existed(const char *pathname, int proj_id, int shmflag = 0600);
 int create_shm(const char *pathname, int proj_id, int size, int shmflag = 0600);
-int create_sem(const char *pathname, int proj_id, int semNum, int shmflag = 0600);
-
+void* connect_shm(int shm_id);
+bool release_shm(int shm_id);
+int create_sem(const char *pathname, int proj_id, int shmflag = 0600);
+bool release_sem(int sem_id);
 
 #endif // _LIB_SHMT_H_

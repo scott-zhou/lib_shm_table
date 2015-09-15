@@ -82,9 +82,13 @@ public:
     static int calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey);
 
 private:
+    static CreateResult convert_create_shm_result(int result);
     std::string ipc_pathname_;
     int ipc_proj_id_;
     int shmflag_;
+    int shm_id_;
+    int sem_id_;
+    void* shm_p_;
 };
 
 template<class T>
@@ -108,30 +112,51 @@ CreateResult Table<T>::create(int table_capacity,
                               const std::vector<Key> & hashKeys /*= std::vector<Key>()*/,
                               const std::vector<Key> & sortKeys /*= std::vector<Key>()*/)
 {
-    CreateResult result = kSuccess;
-    int size = calculateSize(table_capacity, hashKeys.size(), sortKeys.size());
-    int r = create_shm(ipc_pathname_, ipc_proj_id_, size);
-    switch (r) {
-        case 0:
-            result = kFail;
-            break;
-        case 1:
-            result = kSuccess;
-            break;
-        case 2:
-            result = kExisted;
-            break;
-        default:
-            result = kFail;
-            break;
+    if( shm_existed(ipc_pathname_, ipc_proj_id_, shmflag_) ) {
+        return kSuccess;
     }
-    return result;
+    int size = calculateSize(table_capacity, hashKeys.size(), sortKeys.size());
+    shm_id_ = create_shm(ipc_pathname_, ipc_proj_id_, size, shmflag_);
+    if (-1 == shm_id_) {
+        return kFail;
+    }
+    shm_p_ = connect_shm(shm_id_);
+    if(NULL == shm_p) {
+        release_shm(shm_id_);
+        return kFail;
+    }
+    sem_id_ = create_sem(ipc_pathname_, ipc_proj_id_, shmflag_);
+    if(sem_id_ == -1) {
+        release_shm(shm_id_);
+        return kFail;
+    }
+    if(!init_shm(shm_p_)) {
+        release_shm(shm_id_);
+        release_sem(sem_id_);
+        return kFail;
+    }
+    return kSuccess;
 }
 
 template<class T>
 int Table<T>::calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey)
 {
     return calculate_shm_size(table_capacity, num_of_hashkey, num_of_sortkey);
+}
+
+template<class T>
+CreateResult Table<T>::convert_create_shm_result(int result)
+{
+    switch (result) {
+        case 0:
+            return kFail;
+        case 1:
+            return kSuccess;
+        case 2:
+            return kExisted;
+        default:
+            return kFail;
+    }
 }
 
 } //namespace lib_shm_table

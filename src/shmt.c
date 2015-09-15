@@ -22,36 +22,123 @@ int calculate_shm_size(int table_capacity, int num_of_hashkey, int num_of_sortke
            ;
 }
 
+bool shm_existed(const char *pathname, int proj_id, int shmflag /*= 0600)*/)
+{
+    assert(proj_id >=0);
+    assert(proj_id <= 255);
+    assert(pathname != NULL);
+    assert(strlen(pathname) > 0);
+
+    key_t ipckey = ftok(pathname,proj_id);
+    if(ipckey == -1){
+        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",pathname,proj_id);
+        return false;
+    }
+
+    int shm_id = shmget(ipckey,0,IPC_CREAT|shmflag);
+    if(shm_id > -1){
+        //The shared memory is already existed.
+        return true;
+    }
+    return false;
+}
+
 int create_shm(const char *pathname,
                int proj_id,
                int size,
                int shmflag/* = 0600*/)
 {
-    assert(ipcid >=0);
-    assert(ipcid <= 255);
-    assert(ipcPathName != NULL);
-    assert(strlen(ipcPathName) > 0);
-    assert(shmSize > 0);
+    assert(proj_id >=0);
+    assert(proj_id <= 255);
+    assert(pathname != NULL);
+    assert(strlen(pathname) > 0);
+    assert(size > 0);
 
     key_t ipckey = ftok(pathname,proj_id);
     if(ipckey == -1){
-        shmt_log(LOGDEBUG,"ftok(ipcPathName(%s),ipcid(%d)) error.",ipcPathName,ipcid);
-        return 0;
-    }
-
-    int shm_id = shmget(ipckey,0,IPC_CREAT|shmflag);
-    if(shmID > -1){
-        //The shared memory is already existed.
-        return 2;
+        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",pathname,proj_id);
+        return -1;
     }
 
     shm_id = shmget(ipckey,size,IPC_CREAT|shmflag);
     if(shmID == -1){
         shmt_log(LOGDEBUG,"shmget error: %d. ipckey = %d shmSize=%d", errno,ipckey,size);
-        return 0;
+        return -1;
     }
-    return 1;
+    return shm_id;
 }
 
-int create_sem(const char *ipcPathName, int ipcid, int semNum, int operatorFlag/* = 0600*/)
-{}
+void* connect_shm(int shm_id)
+{
+    void* p = shmat(shm_id,NULL,0);
+    if((int)p == -1){
+        inmdb_log(LOGDEBUG,"shmat fail, errno: %d.", errno);
+        return NULL;
+    }
+    return p;
+}
+
+int releaseShm(int shm_id)
+{
+    if ( shm_id >= 0 ){
+        if (shmctl(shm_id, IPC_RMID, 0) < 0){
+            inmdb_log(LOGDEBUG,"semctl at set value error: %d", errno);
+            return false;
+        }
+    }
+    else{
+        return false;
+    }
+    return true;
+}
+
+
+int create_sem(const char *pathname,
+               int proj_id,
+               int shmflag/* = 0600*/)
+{
+    assert(proj_id >=0);
+    assert(proj_id <= 255);
+    assert(pathname != NULL);
+    assert(strlen(pathname) > 0);
+    assert(sem_num > 0);
+
+    key_t ipckey = ftok(pathname,proj_id);
+    if(ipckey == -1){
+        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",pathname,proj_id);
+        return false;
+    }
+
+    int sem_id = semget(ipckey,SEM_NUM_FOR_RWLOCK ,IPC_CREAT|shmflag);
+    if(sem_id == -1){
+        inmdb_log(LOGDEBUG,"semget error: %d. ipckey = %d", errno, ipckey);
+        return -1;
+    }
+
+    union semum {
+        int val;
+        struct semid_ds *buf;
+        ushort *array;
+    }arg;
+    ushort ar[SEM_NUM_FOR_RWLOCK];
+    memset(&arg,0,sizeof(arg));
+    memset(ar, 0, SEM_NUM_FOR_RWLOCK*sizeof(ushort));
+    for (int i=0; i<SEM_NUM_FOR_RWLOCK; i++) {ar[i] = 1;};
+    arg.array = ar;
+
+    if (semctl(sem_id, 0, SETALL, arg) == -1) {
+        inmdb_log(LOGDEBUG,"semctl SETALL fail, errno: %d", errno);
+        release_sem(sem_id);
+        return -1;
+    }
+    return sem_id;
+}
+
+bool release_sem(int sem_id)
+{
+    if (semctl(sem_id, 0, IPC_RMID) < 0) {
+        return false;
+    }
+    return true;
+}
+
