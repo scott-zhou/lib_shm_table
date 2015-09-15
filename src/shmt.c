@@ -78,7 +78,7 @@ void* connect_shm(int shm_id)
     return p;
 }
 
-int releaseShm(int shm_id)
+bool release_shm(int shm_id)
 {
     if ( shm_id >= 0 ){
         if (shmctl(shm_id, IPC_RMID, 0) < 0){
