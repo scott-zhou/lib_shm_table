@@ -72,7 +72,7 @@ void* connect_shm(int shm_id)
 {
     void* p = shmat(shm_id,NULL,0);
     if((int)p == -1){
-        inmdb_log(LOGDEBUG,"shmat fail, errno: %d.", errno);
+        shmt_log(LOGDEBUG,"shmat fail, errno: %d.", errno);
         return NULL;
     }
     return p;
@@ -82,7 +82,7 @@ bool release_shm(int shm_id)
 {
     if ( shm_id >= 0 ){
         if (shmctl(shm_id, IPC_RMID, 0) < 0){
-            inmdb_log(LOGDEBUG,"semctl at set value error: %d", errno);
+            shmt_log(LOGDEBUG,"semctl at set value error: %d", errno);
             return false;
         }
     }
@@ -111,7 +111,7 @@ int create_sem(const char *pathname,
 
     int sem_id = semget(ipckey,SEM_NUM_FOR_RWLOCK ,IPC_CREAT|shmflag);
     if(sem_id == -1){
-        inmdb_log(LOGDEBUG,"semget error: %d. ipckey = %d", errno, ipckey);
+        shmt_log(LOGDEBUG,"semget error: %d. ipckey = %d", errno, ipckey);
         return -1;
     }
 
@@ -127,7 +127,7 @@ int create_sem(const char *pathname,
     arg.array = ar;
 
     if (semctl(sem_id, 0, SETALL, arg) == -1) {
-        inmdb_log(LOGDEBUG,"semctl SETALL fail, errno: %d", errno);
+        shmt_log(LOGDEBUG,"semctl SETALL fail, errno: %d", errno);
         release_sem(sem_id);
         return -1;
     }
@@ -136,9 +136,78 @@ int create_sem(const char *pathname,
 
 bool release_sem(int sem_id)
 {
+    assert(sem_id >= 0);
     if (semctl(sem_id, 0, IPC_RMID) < 0) {
         return false;
     }
     return true;
+}
+
+bool lock(int sem_id, int locker)
+{
+    struct sembuf sbuf;
+    sbuf.sem_num= locker;
+    sbuf.sem_op = -1;
+    sbuf.sem_flg = SEM_UNDO;
+    if(semop(sem_id, &sbuf, 1) == -1 ){
+        shmt_log(LOGDEBUG,"semop operate error: %d, sem_id = %d locker = %d",
+                  errno, sem_id, locker);
+        return false;
+    }
+    shmt_log(LOGDEBUG,"lock succeed for sem_id %d locker %d.",sem_id, locker);
+    return true;
+}
+
+bool unlock(int sem_id, int locker)
+{
+    struct sembuf sbuf;
+    sbuf.sem_num= locker;
+    sbuf.sem_op = 1;
+    sbuf.sem_flg = SEM_UNDO;
+    if(semop(sem_id, &sbuf, 1) == -1 ){
+        shmt_log(LOGDEBUG,"semop operate error: %d, sem_id = %d locker = %d",
+                  errno, sem_id, locker);
+        return false;
+    }
+    shmt_log(LOGDEBUG,"unlock succeed for sem_id %d locker %d.",sem_id, locker);
+    return true;
+}
+
+bool read_lock(struct ShmDescriptor* shm_descriptor, int sem_id)
+{
+    assert(shm_descriptor != NULL);
+    assert(sem_id >= 0);
+    lock(sem_id, READ_LOCK) || return false;
+    if(0 == shm_descriptor->lock_counter++) {
+        lock(sem_id, WRITE_LOCK);
+    }
+    unlock(sem_id, READ_LOCK) || return false;
+    return true;
+}
+
+bool read_unlock(struct ShmDescriptor* shm_descriptor, int sem_id)
+{
+    assert(shm_descriptor != NULL);
+    assert(sem_id >= 0);
+    lock(sem_id, READ_LOCK) || return false;
+    if(0 == --shm_descriptor->lock_counter) {
+        unlock(sem_id, WRITE_LOCK);
+    }
+    unlock(sem_id, READ_LOCK) || return false;
+    return true;
+}
+
+bool write_lock(struct ShmDescriptor* shm_descriptor, int sem_id)
+{
+    assert(shm_descriptor != NULL);
+    assert(sem_id >= 0);
+    return lock(sem_id, WRITE_LOCK);
+}
+
+bool write_unlock(struct ShmDescriptor* shm_descriptor, int sem_id)
+{
+    assert(shm_descriptor != NULL);
+    assert(sem_id >= 0);
+    return unlock(sem_id, WRITE_LOCK);
 }
 
