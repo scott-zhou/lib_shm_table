@@ -177,6 +177,7 @@ bool read_lock(struct ShmDescriptor* shm_descriptor, int sem_id)
 {
     assert(shm_descriptor != NULL);
     assert(sem_id >= 0);
+    if(!shm_descriptor->lock_flag) return true;
     lock(sem_id, READ_LOCK) || return false;
     if(0 == shm_descriptor->lock_counter++) {
         lock(sem_id, WRITE_LOCK);
@@ -189,6 +190,7 @@ bool read_unlock(struct ShmDescriptor* shm_descriptor, int sem_id)
 {
     assert(shm_descriptor != NULL);
     assert(sem_id >= 0);
+    if(!shm_descriptor->lock_flag) return true;
     lock(sem_id, READ_LOCK) || return false;
     if(0 == --shm_descriptor->lock_counter) {
         unlock(sem_id, WRITE_LOCK);
@@ -201,6 +203,7 @@ bool write_lock(struct ShmDescriptor* shm_descriptor, int sem_id)
 {
     assert(shm_descriptor != NULL);
     assert(sem_id >= 0);
+    if(!shm_descriptor->lock_flag) return true;
     return lock(sem_id, WRITE_LOCK);
 }
 
@@ -208,6 +211,7 @@ bool write_unlock(struct ShmDescriptor* shm_descriptor, int sem_id)
 {
     assert(shm_descriptor != NULL);
     assert(sem_id >= 0);
+    if(!shm_descriptor->lock_flag) return true;
     return unlock(sem_id, WRITE_LOCK);
 }
 
