@@ -34,7 +34,7 @@ enum KeyType{
     kKeyTypeString
 };
 struct KeyComponent {
-    KeyType type;
+    enum KeyType type;
     int offset;
     int length;
 };
@@ -42,8 +42,8 @@ struct KeyComponent {
 // I will try to document it latter.
 // TODO: Documentation about how to use Key.
 struct Key {
-    KeyType type;
-    SearchMethod method;
+    enum KeyType type;
+    enum SearchMethod method;
     int numOfKeyComponent; // Available range: 1-2
     struct KeyComponent components[2];
     char format[MAX_LEN_KEY_FORMAT];
@@ -51,7 +51,7 @@ struct Key {
 
 // Key data which saved in shm
 struct KeyInShm {
-    Key key;
+    struct Key key;
     int load_count;
 };
 
@@ -60,13 +60,13 @@ struct DoublyLinkedListNode {
     int next;
 };
 
-int get_hash_prime_number(int);
-int calculate_shm_size(int table_capacity, int num_of_hashkey, int num_of_sortkey);
-bool shm_existed(const char *pathname, int proj_id, int shmflag = 0600);
-int create_shm(const char *pathname, int proj_id, int size, int shmflag = 0600);
+int get_hash_prime_number(int table_capacity);
+int calculate_shm_size(int table_capacity, int element_size, int num_of_hashkey, int num_of_sortkey);
+bool shm_existed(const char *pathname, int proj_id, int shmflag/*= 0600*/);
+int create_shm(const char *pathname, int proj_id, int size, int shmflag/*= 0600*/);
 void* connect_shm(int shm_id);
 bool release_shm(int shm_id);
-int create_sem(const char *pathname, int proj_id, int shmflag = 0600);
+int create_sem(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 bool release_sem(int sem_id);
 
 // A set of functions for RW lock, use two semaphore and a counter

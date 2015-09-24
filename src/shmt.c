@@ -1,8 +1,17 @@
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #include "shmt.h"
 #include "shmt_log.h"
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/sem.h>
+#include <assert.h>
+#include <stddef.h>
+#include <string.h>
+#include <errno.h>
 
 int get_hash_prime_number(int table_capacity)
 {
@@ -10,15 +19,18 @@ int get_hash_prime_number(int table_capacity)
     return table_capacity;
 }
 
-int calculate_shm_size(int table_capacity, int num_of_hashkey, int num_of_sortkey)
+int calculate_shm_size(int table_capacity,
+                       int element_size,
+                       int num_of_hashkey,
+                       int num_of_sortkey)
 {
     return sizeof(struct ShmDescriptor) +
            sizeof(struct KeyInShm) * (num_of_hashkey + num_of_sortkey) +
-           2*sizeof(int)*getHashPrimeNumber(table_capacity + 2)*num_of_hashkey +
+           2*sizeof(int)*get_hash_prime_number(table_capacity+2)*num_of_hashkey+
            sizeof(int)*(table_capacity + 2)*num_of_sortkey +
            sizeof(struct DoublyLinkedListNode)*(table_capacity + 2) +
            sizeof(time_t)*(table_capacity + 2) /*time stamp for elements*/ +
-           sizeof(T)*(tablecapacity + 2)
+           element_size*(table_capacity + 2)
            ;
 }
 
@@ -31,7 +43,8 @@ bool shm_existed(const char *pathname, int proj_id, int shmflag /*= 0600)*/)
 
     key_t ipckey = ftok(pathname,proj_id);
     if(ipckey == -1){
-        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",pathname,proj_id);
+        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",
+                 pathname,proj_id);
         return false;
     }
 
@@ -56,13 +69,15 @@ int create_shm(const char *pathname,
 
     key_t ipckey = ftok(pathname,proj_id);
     if(ipckey == -1){
-        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",pathname,proj_id);
+        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",
+                 pathname,proj_id);
         return -1;
     }
 
-    shm_id = shmget(ipckey,size,IPC_CREAT|shmflag);
-    if(shmID == -1){
-        shmt_log(LOGDEBUG,"shmget error: %d. ipckey = %d shmSize=%d", errno,ipckey,size);
+    int shm_id = shmget(ipckey,size,IPC_CREAT|shmflag);
+    if(shm_id == -1){
+        shmt_log(LOGDEBUG,"shmget error: %d. ipckey = %d shmSize=%d",
+                 errno,ipckey,size);
         return -1;
     }
     return shm_id;
@@ -101,7 +116,6 @@ int create_sem(const char *pathname,
     assert(proj_id <= 255);
     assert(pathname != NULL);
     assert(strlen(pathname) > 0);
-    assert(sem_num > 0);
 
     key_t ipckey = ftok(pathname,proj_id);
     if(ipckey == -1){
@@ -118,12 +132,13 @@ int create_sem(const char *pathname,
     union semum {
         int val;
         struct semid_ds *buf;
-        ushort *array;
+        unsigned short *array;
+        struct seminfo  *__buf;
     }arg;
-    ushort ar[SEM_NUM_FOR_RWLOCK];
+    unsigned short ar[SEM_NUM_FOR_RWLOCK];
     memset(&arg,0,sizeof(arg));
-    memset(ar, 0, SEM_NUM_FOR_RWLOCK*sizeof(ushort));
-    for (int i=0; i<SEM_NUM_FOR_RWLOCK; i++) {ar[i] = 1;};
+    memset(ar, 0, SEM_NUM_FOR_RWLOCK*sizeof(unsigned short));
+    for (int i=0; i<SEM_NUM_FOR_RWLOCK; i++) {ar[i] = 1;}
     arg.array = ar;
 
     if (semctl(sem_id, 0, SETALL, arg) == -1) {
@@ -178,11 +193,11 @@ bool read_lock(struct ShmDescriptor* shm_descriptor, int sem_id)
     assert(shm_descriptor != NULL);
     assert(sem_id >= 0);
     if(!shm_descriptor->lock_flag) return true;
-    lock(sem_id, READ_LOCK) || return false;
+    if(!lock(sem_id, READ_LOCK)) { return false; }
     if(0 == shm_descriptor->lock_counter++) {
         lock(sem_id, WRITE_LOCK);
     }
-    unlock(sem_id, READ_LOCK) || return false;
+    if(!unlock(sem_id, READ_LOCK)) { return false; }
     return true;
 }
 
@@ -191,11 +206,11 @@ bool read_unlock(struct ShmDescriptor* shm_descriptor, int sem_id)
     assert(shm_descriptor != NULL);
     assert(sem_id >= 0);
     if(!shm_descriptor->lock_flag) return true;
-    lock(sem_id, READ_LOCK) || return false;
+    if(!lock(sem_id, READ_LOCK)) { return false; }
     if(0 == --shm_descriptor->lock_counter) {
         unlock(sem_id, WRITE_LOCK);
     }
-    unlock(sem_id, READ_LOCK) || return false;
+    if(!unlock(sem_id, READ_LOCK)) { return false; }
     return true;
 }
 

@@ -11,6 +11,8 @@
 #ifndef _LIB_SHM_TABLE_H_
 #define _LIB_SHM_TABLE_H_
 
+#include <stdio.h>
+
 enum InmdbLogLevel {
     LOGCRITICAL = 1,
     LOGMINOR    = 2,
