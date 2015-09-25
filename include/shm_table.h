@@ -11,9 +11,18 @@
 
 #include <vector>
 #include <string>
+extern "C" {
 #include "shmt.h"
+}
 
 namespace lib_shm_table {
+
+    enum CreateResult {
+        kFail    = 0,
+        kSuccess = 1,
+        kExisted = 2
+    };
+
 
 // Template class for table in shared memory. Sample usage:
 //    struct OwnStruct {
@@ -31,14 +40,9 @@ namespace lib_shm_table {
 //    myTable.detach()
 template<class T>
 class Table{
-#typedefs and enums
-    enum CreateResult {
-        kFail    = 0,
-        kSuccess = 1,
-        kExisted = 2
-    };
+//typedefs and enums
 
-#consts
+//consts
 
 public:
     // Construct
@@ -60,24 +64,24 @@ public:
     CreateResult create(int table_capacity,
                         const std::vector<Key> & hashKeys = std::vector<Key>(),
                         const std::vector<Key> & sortKeys = std::vector<Key>());
-
+/*
     // Connect table to shared memory
     // Return true if succeed
     bool connect();
-
+*/
     // Return if the instance is connected to shared memory or not.
     bool isConnected();
 
     // Detach table from shared memory
     // Return true if succeed
     bool detach();
-
+/*
     // Set if the table use lock to protect data save for multi thread(process)
     void useLock(bool use);
 
     // Returns true if the table use lock to protect data save for multi thread(process)
     bool isUseLock();
-
+*/
     // Return the size for shared memory
     static int calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey);
 
@@ -95,7 +99,10 @@ template<class T>
 Table<T>::Table(const char *ipc_pathname,int ipc_proj_id,int shmflag /*= 0600*/) :
     ipc_pathname_(ipc_pathname),
     ipc_proj_id_(ipc_proj_id),
-    shmflag_(shmflag)
+    shmflag_(shmflag),
+    shm_id_(-1),
+    sem_id_(-1),
+    shm_p_(NULL)
 {
 }
 
@@ -112,20 +119,20 @@ CreateResult Table<T>::create(int table_capacity,
                               const std::vector<Key> & hashKeys /*= std::vector<Key>()*/,
                               const std::vector<Key> & sortKeys /*= std::vector<Key>()*/)
 {
-    if( shm_existed(ipc_pathname_, ipc_proj_id_, shmflag_) ) {
+    if( shm_existed(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_) ) {
         return kSuccess;
     }
     int size = calculateSize(table_capacity, hashKeys.size(), sortKeys.size());
-    shm_id_ = create_shm(ipc_pathname_, ipc_proj_id_, size, shmflag_);
+    shm_id_ = create_shm(ipc_pathname_.c_str(), ipc_proj_id_, size, shmflag_);
     if (-1 == shm_id_) {
         return kFail;
     }
     shm_p_ = connect_shm(shm_id_);
-    if(NULL == shm_p) {
+    if(NULL == shm_p_) {
         release_shm(shm_id_);
         return kFail;
     }
-    sem_id_ = create_sem(ipc_pathname_, ipc_proj_id_, shmflag_);
+    sem_id_ = create_sem(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_);
     if(sem_id_ == -1) {
         release_shm(shm_id_);
         return kFail;
@@ -133,6 +140,9 @@ CreateResult Table<T>::create(int table_capacity,
     if(!init_shm(shm_p_)) {
         release_shm(shm_id_);
         release_sem(sem_id_);
+        shm_id_ = -1;
+        sem_id_ = -1;
+        shm_p_ = NULL;
         return kFail;
     }
     return kSuccess;
@@ -141,7 +151,7 @@ CreateResult Table<T>::create(int table_capacity,
 template<class T>
 int Table<T>::calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey)
 {
-    return calculate_shm_size(table_capacity, num_of_hashkey, num_of_sortkey);
+    return calculate_shm_size(table_capacity, sizeof(T), num_of_hashkey, num_of_sortkey);
 }
 
 template<class T>
@@ -157,6 +167,20 @@ CreateResult Table<T>::convert_create_shm_result(int result)
         default:
             return kFail;
     }
+}
+
+template<class T>
+bool Table<T>::isConnected()
+{
+    if (NULL == shm_p_)
+        return false;
+    return true;
+}
+
+template<class T>
+bool Table<T>::detach()
+{
+    return true;
 }
 
 } //namespace lib_shm_table

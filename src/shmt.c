@@ -158,6 +158,11 @@ bool release_sem(int sem_id)
     return true;
 }
 
+bool init_shm(void *p)
+{
+    return true;
+}
+
 bool lock(int sem_id, int locker)
 {
     struct sembuf sbuf;

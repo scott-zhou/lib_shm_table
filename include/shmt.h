@@ -68,6 +68,7 @@ void* connect_shm(int shm_id);
 bool release_shm(int shm_id);
 int create_sem(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 bool release_sem(int sem_id);
+bool init_shm(void *p);
 
 // A set of functions for RW lock, use two semaphore and a counter
 // help function lock() and unlock() are not declared in .h file
