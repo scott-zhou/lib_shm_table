@@ -64,11 +64,14 @@ int get_hash_prime_number(int table_capacity);
 int calculate_shm_size(int table_capacity, int element_size, int num_of_hashkey, int num_of_sortkey);
 bool shm_existed(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 int create_shm(const char *pathname, int proj_id, int size, int shmflag/*= 0600*/);
+int get_shm_id(const char *pathname, int proj_id, int shmflag/*= 0600*/);
+int get_sem_id(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 void* connect_shm(int shm_id);
 bool release_shm(int shm_id);
 int create_sem(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 bool release_sem(int sem_id);
 bool init_shm(void *p);
+bool detach_shm(void *p);
 
 // A set of functions for RW lock, use two semaphore and a counter
 // help function lock() and unlock() are not declared in .h file

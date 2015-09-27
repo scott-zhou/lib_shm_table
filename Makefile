@@ -18,10 +18,14 @@ ${LIB_DIR}:
 shmt.o:src/shmt.c
 	gcc -Iinclude/ -Wall -c -O2 -std=c99 src/shmt.c -o lib/shmt.o
 
-test_apps:create
+test_apps:create \
+	destroy
 
 create:test/create.cc
 	g++ -Iinclude/ -Wall test/create.cc -g -o bin/create lib/shmt.o
+
+destroy:test/destroy.cc
+	g++ -Iinclude/ -Wall test/destroy.cc -g -o bin/destroy lib/shmt.o
 
 clean:
 	rm -f lib/shmt.o

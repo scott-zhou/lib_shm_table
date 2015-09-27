@@ -83,6 +83,52 @@ int create_shm(const char *pathname,
     return shm_id;
 }
 
+int get_shm_id(const char *pathname, int proj_id, int shmflag/*= 0600*/)
+{
+    assert(proj_id >=0);
+    assert(proj_id <= 255);
+    assert(pathname != NULL);
+    assert(strlen(pathname) > 0);
+
+    key_t ipckey = ftok(pathname,proj_id);
+    if(ipckey == -1){
+        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",
+                 pathname,proj_id);
+        return -1;
+    }
+
+    int shm_id = shmget(ipckey,0,IPC_CREAT|shmflag);
+    if(shm_id == -1){
+        shmt_log(LOGDEBUG,"shmget error: %d. ipckey = %d",
+                 errno,ipckey);
+        return -1;
+    }
+    return shm_id;
+}
+
+int get_sem_id(const char *pathname, int proj_id, int shmflag/*= 0600*/)
+{
+    assert(proj_id >=0);
+    assert(proj_id <= 255);
+    assert(pathname != NULL);
+    assert(strlen(pathname) > 0);
+
+    key_t ipckey = ftok(pathname,proj_id);
+    if(ipckey == -1){
+        shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",
+                 pathname,proj_id);
+        return -1;
+    }
+
+    int sem_id = semget(ipckey,0 ,IPC_CREAT|shmflag);
+    if(sem_id == -1){
+        shmt_log(LOGDEBUG,"semget error: %d, ipckey = %d",
+                  errno, ipckey);
+        return 0;
+    }
+    return sem_id;
+}
+
 void* connect_shm(int shm_id)
 {
     void* p = shmat(shm_id,NULL,0);
@@ -95,13 +141,9 @@ void* connect_shm(int shm_id)
 
 bool release_shm(int shm_id)
 {
-    if ( shm_id >= 0 ){
-        if (shmctl(shm_id, IPC_RMID, 0) < 0){
-            shmt_log(LOGDEBUG,"semctl at set value error: %d", errno);
-            return false;
-        }
-    }
-    else{
+    assert(shm_id >= 0);
+    if (shmctl(shm_id, IPC_RMID, 0) < 0){
+        shmt_log(LOGDEBUG,"semctl at set value error: %d", errno);
         return false;
     }
     return true;
@@ -161,6 +203,14 @@ bool release_sem(int sem_id)
 bool init_shm(void *p)
 {
     return true;
+}
+
+bool detach_shm(void *p)
+{
+    if (NULL == p) {
+        return true;
+    }
+    return (shmdt(p)==0);
 }
 
 bool lock(int sem_id, int locker)

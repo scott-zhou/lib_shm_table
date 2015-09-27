@@ -64,11 +64,11 @@ public:
     CreateResult create(int table_capacity,
                         const std::vector<Key> & hashKeys = std::vector<Key>(),
                         const std::vector<Key> & sortKeys = std::vector<Key>());
-/*
+
     // Connect table to shared memory
     // Return true if succeed
     bool connect();
-*/
+
     // Return if the instance is connected to shared memory or not.
     bool isConnected();
 
@@ -82,6 +82,10 @@ public:
     // Returns true if the table use lock to protect data save for multi thread(process)
     bool isUseLock();
 */
+
+    // Return true if the shm and sem is successfully destroied.
+    bool destroy();
+
     // Return the size for shared memory
     static int calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey);
 
@@ -135,6 +139,8 @@ CreateResult Table<T>::create(int table_capacity,
     sem_id_ = create_sem(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_);
     if(sem_id_ == -1) {
         release_shm(shm_id_);
+        shm_id_ = -1;
+        shm_p_ = NULL;
         return kFail;
     }
     if(!init_shm(shm_p_)) {
@@ -170,17 +176,55 @@ CreateResult Table<T>::convert_create_shm_result(int result)
 }
 
 template<class T>
+bool Table<T>::connect()
+{
+    if( !shm_existed(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_) ) {
+        return false;
+    }
+    if(shm_id_ == -1) {
+        shm_id_ = get_shm_id(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_);
+    }
+    if(sem_id_ == -1) {
+        sem_id_ = get_sem_id(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_);
+    }
+    shm_p_ = connect_shm(shm_id_);
+    if(NULL == shm_p_) {
+        return false;
+    }
+    return true;
+}
+
+template<class T>
 bool Table<T>::isConnected()
 {
-    if (NULL == shm_p_)
+    if (NULL == shm_p_ && shm_id_ != -1 && sem_id_ != -1) {
         return false;
+    }
     return true;
 }
 
 template<class T>
 bool Table<T>::detach()
 {
-    return true;
+    bool rt = detach_shm(shm_p_);
+    shm_p_ = NULL;
+    return rt;
+}
+
+template<class T>
+bool Table<T>::destroy()
+{
+    if(!isConnected()) {
+        return false;
+    }
+    detach();
+    if(release_shm(shm_id_)) {
+        shm_id_ = -1;
+    }
+    if(release_sem(sem_id_)) {
+        sem_id_ = -1;
+    }
+    return shm_id_ == -1 && sem_id_ == -1;
 }
 
 } //namespace lib_shm_table
