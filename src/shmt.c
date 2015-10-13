@@ -19,7 +19,7 @@ int get_hash_prime_number(int table_capacity)
     return table_capacity;
 }
 
-int calculate_shm_size(int table_capacity,
+size_t calculate_shm_size(int table_capacity,
                        int element_size,
                        int num_of_hashkey,
                        int num_of_sortkey)
@@ -58,7 +58,7 @@ bool shm_existed(const char *pathname, int proj_id, int shmflag /*= 0600)*/)
 
 int create_shm(const char *pathname,
                int proj_id,
-               int size,
+               size_t size,
                int shmflag/* = 0600*/)
 {
     assert(proj_id >=0);
@@ -76,7 +76,7 @@ int create_shm(const char *pathname,
 
     int shm_id = shmget(ipckey,size,IPC_CREAT|shmflag);
     if(shm_id == -1){
-        shmt_log(LOGDEBUG,"shmget error: %d. ipckey = %d shmSize=%d",
+        shmt_log(LOGDEBUG,"shmget error: %d. ipckey = %d shmSize=%zu",
                  errno,ipckey,size);
         return -1;
     }

@@ -87,7 +87,7 @@ public:
     bool destroy();
 
     // Return the size for shared memory
-    static int calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey);
+    static size_t calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey);
 
 private:
     static CreateResult convert_create_shm_result(int result);
@@ -126,7 +126,7 @@ CreateResult Table<T>::create(int table_capacity,
     if( shm_existed(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_) ) {
         return kSuccess;
     }
-    int size = calculateSize(table_capacity, hashKeys.size(), sortKeys.size());
+    size_t size = calculateSize(table_capacity, hashKeys.size(), sortKeys.size());
     shm_id_ = create_shm(ipc_pathname_.c_str(), ipc_proj_id_, size, shmflag_);
     if (-1 == shm_id_) {
         return kFail;
@@ -155,7 +155,7 @@ CreateResult Table<T>::create(int table_capacity,
 }
 
 template<class T>
-int Table<T>::calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey)
+size_t Table<T>::calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey)
 {
     return calculate_shm_size(table_capacity, sizeof(T), num_of_hashkey, num_of_sortkey);
 }

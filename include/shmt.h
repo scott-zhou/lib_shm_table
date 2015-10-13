@@ -2,6 +2,7 @@
 #define _LIB_SHMT_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #define MAX_LEN_KEY_FORMAT  32
 #define SEM_NUM_FOR_RWLOCK  2
@@ -61,9 +62,9 @@ struct DoublyLinkedListNode {
 };
 
 int get_hash_prime_number(int table_capacity);
-int calculate_shm_size(int table_capacity, int element_size, int num_of_hashkey, int num_of_sortkey);
+size_t calculate_shm_size(int table_capacity, int element_size, int num_of_hashkey, int num_of_sortkey);
 bool shm_existed(const char *pathname, int proj_id, int shmflag/*= 0600*/);
-int create_shm(const char *pathname, int proj_id, int size, int shmflag/*= 0600*/);
+int create_shm(const char *pathname, int proj_id, size_t size, int shmflag/*= 0600*/);
 int get_shm_id(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 int get_sem_id(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 void* connect_shm(int shm_id);
