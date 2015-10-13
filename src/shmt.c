@@ -132,7 +132,7 @@ int get_sem_id(const char *pathname, int proj_id, int shmflag/*= 0600*/)
 void* connect_shm(int shm_id)
 {
     void* p = shmat(shm_id,NULL,0);
-    if((int)p == -1){
+    if(p == (void *)-1){
         shmt_log(LOGDEBUG,"shmat fail, errno: %d.", errno);
         return NULL;
     }
