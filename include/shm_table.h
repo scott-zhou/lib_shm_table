@@ -124,7 +124,7 @@ CreateResult Table<T>::create(int table_capacity,
                               const std::vector<Key> & sortKeys /*= std::vector<Key>()*/)
 {
     if( shm_existed(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_) ) {
-        return kSuccess;
+        return kExisted;
     }
     size_t size = calculateSize(table_capacity, hashKeys.size(), sortKeys.size());
     shm_id_ = create_shm(ipc_pathname_.c_str(), ipc_proj_id_, size, shmflag_);
@@ -143,7 +143,7 @@ CreateResult Table<T>::create(int table_capacity,
         shm_p_ = NULL;
         return kFail;
     }
-    if(!init_shm(shm_p_)) {
+    if(!init_shm(shm_p_, table_capacity, size, hashKeys.size(), sortKeys.size())) {
         release_shm(shm_id_);
         release_sem(sem_id_);
         shm_id_ = -1;

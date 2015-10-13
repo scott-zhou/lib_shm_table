@@ -10,7 +10,7 @@
 #define WRITE_LOCK          1
 
 struct ShmDescriptor{
-    int shm_size;
+    size_t shm_size;
     /*No need to save sem number, it shoule be always 2 for a rwlock*/
     bool lock_flag; /*use lock or not*/
     int lock_counter;
@@ -71,8 +71,14 @@ void* connect_shm(int shm_id);
 bool release_shm(int shm_id);
 int create_sem(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 bool release_sem(int sem_id);
-bool init_shm(void *p);
+bool init_shm(void *p, int table_capacity, size_t size, int num_of_hash_key, int num_of_sort_key);
 bool detach_shm(void *p);
+
+// Get all components points in shm
+struct ShmDescriptor* getp_shm_descriptor(void *p);
+struct KeyInShm* getp_hashkey(void *p, int key_id);
+struct KeyInShm* getp_sortkey(void *p, int key_id);
+
 
 // A set of functions for RW lock, use two semaphore and a counter
 // help function lock() and unlock() are not declared in .h file

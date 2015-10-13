@@ -162,7 +162,7 @@ int create_sem(const char *pathname,
     key_t ipckey = ftok(pathname,proj_id);
     if(ipckey == -1){
         shmt_log(LOGDEBUG,"ftok(pathname(%s),proj_id(%d)) error.",pathname,proj_id);
-        return false;
+        return -1;
     }
 
     int sem_id = semget(ipckey,SEM_NUM_FOR_RWLOCK ,IPC_CREAT|shmflag);
@@ -200,8 +200,21 @@ bool release_sem(int sem_id)
     return true;
 }
 
-bool init_shm(void *p)
+bool init_shm(void *p, int table_capacity, size_t size, int num_of_hash_key, int num_of_sort_key)
 {
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    //struct ShmDescriptor{
+    descriptor->shm_size = size;
+    descriptor->lock_flag = true;
+    descriptor->lock_counter = 0;
+    descriptor->num_of_hash_key = num_of_hash_key;
+    descriptor->num_of_sort_key = num_of_sort_key;
+    descriptor->size_of_record = 0;
+    //descriptor->size_of_table = ?;
+    descriptor->capacity = table_capacity;
+    descriptor->load_count = 0;
+    descriptor->hash_prime_number = get_hash_prime_number(table_capacity+2);
+    //};
     return true;
 }
 
@@ -285,3 +298,29 @@ bool write_unlock(struct ShmDescriptor* shm_descriptor, int sem_id)
     return unlock(sem_id, WRITE_LOCK);
 }
 
+struct ShmDescriptor* getp_shm_descriptor(void *p)
+{
+    return (struct ShmDescriptor*)p;
+}
+
+struct KeyInShm* getp_hashkey(void *p, int key_id)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    assert(key_id < descriptor->num_of_hash_key);
+    struct KeyInShm* p_hashkey = (struct KeyInShm*)(p+sizeof(struct ShmDescriptor));
+    p_hashkey += key_id;
+    return p_hashkey;
+}
+
+struct KeyInShm* getp_sortkey(void *p, int key_id)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    assert(key_id < descriptor->num_of_sort_key);
+    struct KeyInShm* p_sortkey = (struct KeyInShm*)(
+                p+
+                sizeof(struct ShmDescriptor)+
+                sizeof(struct KeyInShm)*(descriptor->num_of_hash_key)
+                );
+    p_sortkey += key_id;
+    return p_sortkey;
+}
