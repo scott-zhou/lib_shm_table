@@ -75,13 +75,12 @@ public:
     // Detach table from shared memory
     // Return true if succeed
     bool detach();
-/*
+
     // Set if the table use lock to protect data save for multi thread(process)
     void useLock(bool use);
 
     // Returns true if the table use lock to protect data save for multi thread(process)
     bool isUseLock();
-*/
 
     // Return true if the shm and sem is successfully destroied.
     bool destroy();
@@ -232,6 +231,19 @@ bool Table<T>::destroy()
     }
     return shm_id_ == -1 && sem_id_ == -1;
 }
+
+template<class T>
+void Table<T>::useLock(bool use)
+{
+    set_lock_flag(shm_p_, use);
+}
+
+template<class T>
+bool Table<T>::isUseLock()
+{
+    return get_lock_flag(shm_p_);
+}
+
 
 } //namespace lib_shm_table
 #endif // LIB_SHM_TABLE_H_

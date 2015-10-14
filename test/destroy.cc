@@ -17,6 +17,11 @@ int main(int, char* [])
         return 1;
     }
 
+    printf("Table lock flag is %s\n", table.isUseLock() ? "TRUE" : "FALSE");
+
+    table.useLock(false);
+    printf("Table lock flag is %s after set to false.\n", table.isUseLock() ? "TRUE" : "FALSE");
+
     if(table.destroy()){
         printf("Destroy shared memory success.\n");
     }

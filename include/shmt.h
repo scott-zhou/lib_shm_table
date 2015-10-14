@@ -75,6 +75,8 @@ bool init_shm(void *p, int table_capacity, size_t size, int num_of_hash_key, int
 bool detach_shm(void *p);
 bool add_hashkey(void* p, unsigned int id, const struct Key* key);
 bool add_sortkey(void* p, unsigned int id, const struct Key* key);
+void set_lock_flag(void* p, bool use_lock);
+bool get_lock_flag(void* p);
 
 // Get all components points in shm
 struct ShmDescriptor* getp_shm_descriptor(void *p);

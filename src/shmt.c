@@ -340,3 +340,15 @@ bool add_sortkey(void* p, unsigned int id, const struct Key* key)
     key_point->key = *key;
     return true;
 }
+
+void set_lock_flag(void* p, bool use_lock)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    descriptor->lock_flag = use_lock;
+}
+
+bool get_lock_flag(void* p)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    return descriptor->lock_flag;
+}
