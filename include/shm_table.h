@@ -62,8 +62,8 @@ public:
     // NOTES: Keys (if exist) must be created (use function addKey) immediately
     //        after table creatation.
     CreateResult create(int table_capacity,
-                        const std::vector<Key> & hashKeys = std::vector<Key>(),
-                        const std::vector<Key> & sortKeys = std::vector<Key>());
+                        const std::vector<struct Key> & hashKeys = std::vector<struct Key>(),
+                        const std::vector<struct Key> & sortKeys = std::vector<struct Key>());
 
     // Connect table to shared memory
     // Return true if succeed
@@ -120,8 +120,8 @@ Table<T>::~Table()
 
 template<class T>
 CreateResult Table<T>::create(int table_capacity,
-                              const std::vector<Key> & hashKeys /*= std::vector<Key>()*/,
-                              const std::vector<Key> & sortKeys /*= std::vector<Key>()*/)
+                              const std::vector<struct Key> & hashKeys /*= std::vector<struct Key>()*/,
+                              const std::vector<struct Key> & sortKeys /*= std::vector<struct Key>()*/)
 {
     if( shm_existed(ipc_pathname_.c_str(), ipc_proj_id_, shmflag_) ) {
         return kExisted;
@@ -150,6 +150,12 @@ CreateResult Table<T>::create(int table_capacity,
         sem_id_ = -1;
         shm_p_ = NULL;
         return kFail;
+    }
+    for(std::vector<struct Key>::size_type i = 0; i != hashKeys.size(); i++) {
+        add_hashkey(shm_p_, i, &hashKeys[i]);
+    }
+    for(std::vector<struct Key>::size_type i = 0; i != sortKeys.size(); i++) {
+        add_sortkey(shm_p_, i, &sortKeys[i]);
     }
     return kSuccess;
 }

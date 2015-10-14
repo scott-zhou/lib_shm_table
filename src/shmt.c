@@ -324,3 +324,19 @@ struct KeyInShm* getp_sortkey(void *p, int key_id)
     p_sortkey += key_id;
     return p_sortkey;
 }
+
+bool add_hashkey(void* p, unsigned int id, const struct Key* key)
+{
+    struct KeyInShm* key_point = getp_hashkey(p, id);
+    key_point->load_count = 0;
+    key_point->key = *key;
+    return true;
+}
+
+bool add_sortkey(void* p, unsigned int id, const struct Key* key)
+{
+    struct KeyInShm* key_point = getp_sortkey(p, id);
+    key_point->load_count = 0;
+    key_point->key = *key;
+    return true;
+}

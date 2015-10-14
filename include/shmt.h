@@ -73,6 +73,8 @@ int create_sem(const char *pathname, int proj_id, int shmflag/*= 0600*/);
 bool release_sem(int sem_id);
 bool init_shm(void *p, int table_capacity, size_t size, int num_of_hash_key, int num_of_sort_key);
 bool detach_shm(void *p);
+bool add_hashkey(void* p, unsigned int id, const struct Key* key);
+bool add_sortkey(void* p, unsigned int id, const struct Key* key);
 
 // Get all components points in shm
 struct ShmDescriptor* getp_shm_descriptor(void *p);
