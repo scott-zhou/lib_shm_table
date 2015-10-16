@@ -88,9 +88,9 @@ struct KeyInShm* getp_sortkey(void *p, int key_id);
 // help function lock() and unlock() are not declared in .h file
 // NOTE: I use the almost most simple way to implement the RW lock
 // No need to describe more here.
-bool read_lock(struct ShmDescriptor* shm_descriptor, int sem_id);
-bool read_unlock(struct ShmDescriptor* shm_descriptor, int sem_id);
-bool write_lock(struct ShmDescriptor* shm_descriptor, int sem_id);
-bool write_unlock(struct ShmDescriptor* shm_descriptor, int sem_id);
+bool read_lock(void* p, int sem_id);
+bool read_unlock(void* p, int sem_id);
+bool write_lock(void* p, int sem_id);
+bool write_unlock(void* p, int sem_id);
 
 #endif // _LIB_SHMT_H_

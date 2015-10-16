@@ -88,6 +88,9 @@ public:
     // Return the size for shared memory
     static size_t calculateSize(int table_capacity, int num_of_hashkey, int num_of_sortkey);
 
+    // Insert data into table, return data index, -1 means fail.
+    int insert(T& data);
+
 private:
     static CreateResult convert_create_shm_result(int result);
     std::string ipc_pathname_;
@@ -244,6 +247,14 @@ bool Table<T>::isUseLock()
     return get_lock_flag(shm_p_);
 }
 
+template <class T>
+int Table<T>::insert(T& data){
+    int index = -1;
+    if(!write_lock(shm_p_, sem_id_)) {
+        return index;
+    }
+    write_unlock(shm_p_, sem_id_);
+}
 
 } //namespace lib_shm_table
 #endif // LIB_SHM_TABLE_H_
