@@ -215,6 +215,7 @@ bool init_shm(void *p, int table_capacity, size_t size, int num_of_hash_key, int
     descriptor->load_count = 0;
     descriptor->hash_prime_number = get_hash_prime_number(table_capacity+2);
     //};
+    dl_list_init(p);
     return true;
 }
 
@@ -355,4 +356,45 @@ bool get_lock_flag(void* p)
 {
     struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
     return descriptor->lock_flag;
+}
+
+struct DoublyLinkedListNode* dl_getp_head(void* p)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    struct DoublyLinkedListNode* dlist = (struct DoublyLinkedListNode*)(
+                p +
+                sizeof(struct ShmDescriptor) +
+                sizeof(struct KeyInShm)*(descriptor->num_of_hash_key + descriptor->num_of_sort_key) +
+                2*sizeof(int)* descriptor->hash_prime_number * descriptor->num_of_hash_key +
+                sizeof(int)*(descriptor->capacity + 2)*descriptor->num_of_sort_key
+                );
+    return dlist;
+}
+
+struct DoublyLinkedListNode* dl_getp_used_head(void* p)
+{
+    return dl_getp_head(p)+kUsedHead;
+}
+struct DoublyLinkedListNode* dl_getp_unuse_head(void* p)
+{
+    return dl_getp_head(p)+kUnuseHead;
+}
+
+bool dl_list_init(void *p)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    struct DoublyLinkedListNode* dlist = dl_getp_head(p);
+    struct DoublyLinkedListNode* used_head = dlist+kUsedHead; // dlist[0]
+    used_head->next = 0;
+    used_head->prev = 0;
+    for(int i=1; i<descriptor->capacity + 2; i++) {
+        struct DoublyLinkedListNode* cur_node = dlist+i;
+        cur_node->next = i+1;
+        cur_node->prev = i-1;
+    }
+    struct DoublyLinkedListNode* unuse_head = dlist+kUnuseHead; // dlist[1]
+    unuse_head->prev = (descriptor->capacity + 2) - 1;
+    struct DoublyLinkedListNode* unuse_end = dlist+(descriptor->capacity + 2)-1;
+    unuse_end->next = 1;
+    return true;
 }

@@ -56,6 +56,11 @@ struct KeyInShm {
     int load_count;
 };
 
+enum DoublyLinkedListDefine{
+    kUsedHead = 0,
+    kUnuseHead = 1
+};
+
 struct DoublyLinkedListNode {
     int prev;
     int next;
@@ -83,6 +88,11 @@ struct ShmDescriptor* getp_shm_descriptor(void *p);
 struct KeyInShm* getp_hashkey(void *p, int key_id);
 struct KeyInShm* getp_sortkey(void *p, int key_id);
 
+// Doubly Linked List function family
+struct DoublyLinkedListNode* dl_getp_head(void* p);
+struct DoublyLinkedListNode* dl_getp_used_head(void* p);
+struct DoublyLinkedListNode* dl_getp_unuse_head(void* p);
+bool dl_list_init(void *p);
 
 // A set of functions for RW lock, use two semaphore and a counter
 // help function lock() and unlock() are not declared in .h file
