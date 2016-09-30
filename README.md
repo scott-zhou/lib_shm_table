@@ -1,9 +1,9 @@
 # Table in shared memory
 
 ## Background
-I have another project on github named tool-immemorydb, which have over complicated function and non-user-friendly interface. And it's only provide with C++.
-Now I create this new project, it will be simple, and hopefully have user-friendly interface. And I want proview it with different languages.
-The basic function is create a table in Shared Memory (POSIX standard), and provide best access time. It can used as a cache between different processes.
+I have another project on github named tool-immemorydb, which have over complicated function and non-user-friendly interface. And it only provide C++ interface.
+Now I create this new project, it will be simple, and hopefully have user-friendly interface. And I want provide interface in different languages.
+The basic function is implement a table in Shared Memory (POSIX standard), and provide best access time. It can used as a cache between different processes.
 The table can provide a access lock for data safe.
 The table can be a hash table or sorted table for quick search.
 
