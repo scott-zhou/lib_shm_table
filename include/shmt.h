@@ -87,12 +87,14 @@ bool get_lock_flag(void* p);
 struct ShmDescriptor* getp_shm_descriptor(void *p);
 struct KeyInShm* getp_hashkey(void *p, int key_id);
 struct KeyInShm* getp_sortkey(void *p, int key_id);
+void* getp_data(void *p);
 
 // Doubly Linked List function family
 struct DoublyLinkedListNode* dl_getp_head(void* p);
 struct DoublyLinkedListNode* dl_getp_used_head(void* p);
 struct DoublyLinkedListNode* dl_getp_unuse_head(void* p);
 bool dl_list_init(void *p);
+int dl_add_element(void* p); //Add one element to dl, return the position for new element, -1 for fail.
 
 // A set of functions for RW lock, use two semaphore and a counter
 // help function lock() and unlock() are not declared in .h file
@@ -102,5 +104,8 @@ bool read_lock(void* p, int sem_id);
 bool read_unlock(void* p, int sem_id);
 bool write_lock(void* p, int sem_id);
 bool write_unlock(void* p, int sem_id);
+
+// add / remove
+int add_element(void* p, void* data, size_t size); // Return element position, -1 for fail.
 
 #endif // _LIB_SHMT_H_

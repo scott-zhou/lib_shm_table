@@ -330,6 +330,18 @@ struct KeyInShm* getp_sortkey(void *p, int key_id)
     return p_sortkey;
 }
 
+void* getp_data(void *p)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    return p +
+           sizeof(struct ShmDescriptor) +
+           sizeof(struct KeyInShm) * (descriptor->num_of_hash_key + descriptor->num_of_sort_key) +
+           2*sizeof(int)*get_hash_prime_number(descriptor->capacity+2)*descriptor->num_of_hash_key +
+           sizeof(int)*(descriptor->capacity + 2)*descriptor->num_of_sort_key +
+           sizeof(struct DoublyLinkedListNode)*(descriptor->capacity + 2) +
+           sizeof(time_t)*(descriptor->capacity + 2);
+}
+
 bool add_hashkey(void* p, unsigned int id, const struct Key* key)
 {
     struct KeyInShm* key_point = getp_hashkey(p, id);
@@ -397,4 +409,45 @@ bool dl_list_init(void *p)
     struct DoublyLinkedListNode* unuse_end = dlist+(descriptor->capacity + 2)-1;
     unuse_end->next = 1;
     return true;
+}
+
+int dl_add_element(void* p)
+{
+    struct DoublyLinkedListNode* used_head = dl_getp_used_head(p);
+    struct DoublyLinkedListNode* unuse_head = dl_getp_unuse_head(p);
+    int position = unuse_head->next;
+    if(position == kUnuseHead) {
+        return -1;
+    }
+    struct DoublyLinkedListNode* cur_node = dl_getp_head(p) + position;
+    struct DoublyLinkedListNode* prev = dl_getp_head(p) + cur_node->prev;
+    struct DoublyLinkedListNode* next = dl_getp_head(p) + cur_node->next;
+    prev->next = cur_node->next;
+    next->prev = cur_node->prev;
+
+    prev = dl_getp_head(p) + used_head->prev;
+    cur_node->prev = used_head->prev;
+    cur_node->next = kUsedHead;
+    used_head->prev = position;
+    prev->next = position;
+    return position;
+}
+
+int add_element(void* p, void* data, size_t size)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    int position = dl_add_element(p);
+    if(-1 == position) {
+        shmt_log(LOGCRITICAL,"Add element to shm fail, shm table full. Table capacity %d",
+                 descriptor->capacity);
+        return -1;
+    }
+    descriptor->load_count ++;
+    void* p_data = getp_data(p);
+    void* p_to = p_data + (size * position);
+    memcpy(p_to, data, size);
+
+    //TODO: Insert hash data
+    //TODO: Insert sort data
+    return position;
 }

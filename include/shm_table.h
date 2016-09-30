@@ -49,7 +49,7 @@ public:
     // Parameters will be passed to POSIX ftok() and shmget() function.
     // They have exact same meaning with POSIX definition.
     // Please refer to POSIX api help page for details.
-    Table(const char *ipc_pathname,int ipc_proj_id,int shmflag = 0600);
+    Table(const char *ipc_pathname, int ipc_proj_id, int shmflag = 0600);
 
     // Destruct
     ~Table();
@@ -253,7 +253,9 @@ int Table<T>::insert(T& data){
     if(!write_lock(shm_p_, sem_id_)) {
         return index;
     }
+    index = add_element(shm_p_, &data, sizeof(T));
     write_unlock(shm_p_, sem_id_);
+    return index;
 }
 
 } //namespace lib_shm_table
