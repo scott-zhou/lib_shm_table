@@ -28,10 +28,10 @@ enum SearchMethod{
     kSort = 1
 };
 enum KeyType{
-    kKeyTypeInt,
-    kKeyTypeUnsignedInt,
-    kKeyTypeLong,
-    kKeyTypeUnsignedLong,
+    kKeyTypeInt8,
+    kKeyTypeInt16,
+    kKeyTypeInt32,
+    kKeyTypeInt64,
     kKeyTypeString
 };
 struct KeyComponent {
@@ -87,6 +87,8 @@ bool get_lock_flag(void* p);
 struct ShmDescriptor* getp_shm_descriptor(void *p);
 struct KeyInShm* getp_hashkey(void *p, int key_id);
 struct KeyInShm* getp_sortkey(void *p, int key_id);
+int * getp_hash_table(void *p, int key_id);
+int * getp_sort_table(void *p, int key_id);
 void* getp_data(void *p);
 
 // Doubly Linked List function family

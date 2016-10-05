@@ -26,11 +26,11 @@ size_t calculate_shm_size(int table_capacity,
 {
     return sizeof(struct ShmDescriptor) +
            sizeof(struct KeyInShm) * (num_of_hashkey + num_of_sortkey) +
-           2*sizeof(int)*get_hash_prime_number(table_capacity+2)*num_of_hashkey+
-           sizeof(int)*(table_capacity + 2)*num_of_sortkey +
+           2*sizeof(int)*get_hash_prime_number(table_capacity)*num_of_hashkey+
+           sizeof(int)*(table_capacity)*num_of_sortkey +
            sizeof(struct DoublyLinkedListNode)*(table_capacity + 2) +
-           sizeof(time_t)*(table_capacity + 2) /*time stamp for elements*/ +
-           element_size*(table_capacity + 2)
+           sizeof(time_t)*(table_capacity) /*time stamp for elements*/ +
+           element_size*(table_capacity)
            ;
 }
 
@@ -213,7 +213,7 @@ bool init_shm(void *p, int table_capacity, size_t size, int num_of_hash_key, int
     //descriptor->size_of_table = ?;
     descriptor->capacity = table_capacity;
     descriptor->load_count = 0;
-    descriptor->hash_prime_number = get_hash_prime_number(table_capacity+2);
+    descriptor->hash_prime_number = get_hash_prime_number(table_capacity);
     //};
     dl_list_init(p);
     return true;
@@ -330,16 +330,39 @@ struct KeyInShm* getp_sortkey(void *p, int key_id)
     return p_sortkey;
 }
 
+int * getp_hash_table(void *p, int key_id)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    assert(key_id < descriptor->num_of_hash_key);
+    return (int *) (p +
+                    sizeof(struct ShmDescriptor) +
+                    sizeof(struct KeyInShm) * (descriptor->num_of_hash_key + descriptor->num_of_sort_key) +
+                    2*sizeof(int)*descriptor->hash_prime_number*key_id
+                    );
+}
+
+int * getp_sort_table(void *p, int key_id)
+{
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    assert(key_id < descriptor->num_of_sort_key);
+    return (int *) (p +
+                    sizeof(struct ShmDescriptor) +
+                    sizeof(struct KeyInShm) * (descriptor->num_of_hash_key + descriptor->num_of_sort_key) +
+                    2*sizeof(int)*descriptor->hash_prime_number*descriptor->num_of_hash_key +
+                    sizeof(int)*(descriptor->capacity)*key_id
+                    );
+}
+
 void* getp_data(void *p)
 {
     struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
     return p +
            sizeof(struct ShmDescriptor) +
            sizeof(struct KeyInShm) * (descriptor->num_of_hash_key + descriptor->num_of_sort_key) +
-           2*sizeof(int)*get_hash_prime_number(descriptor->capacity+2)*descriptor->num_of_hash_key +
-           sizeof(int)*(descriptor->capacity + 2)*descriptor->num_of_sort_key +
+           2*sizeof(int)*descriptor->hash_prime_number*descriptor->num_of_hash_key +
+           sizeof(int)*(descriptor->capacity)*descriptor->num_of_sort_key +
            sizeof(struct DoublyLinkedListNode)*(descriptor->capacity + 2) +
-           sizeof(time_t)*(descriptor->capacity + 2);
+           sizeof(time_t)*(descriptor->capacity);
 }
 
 bool add_hashkey(void* p, unsigned int id, const struct Key* key)
@@ -378,7 +401,7 @@ struct DoublyLinkedListNode* dl_getp_head(void* p)
                 sizeof(struct ShmDescriptor) +
                 sizeof(struct KeyInShm)*(descriptor->num_of_hash_key + descriptor->num_of_sort_key) +
                 2*sizeof(int)* descriptor->hash_prime_number * descriptor->num_of_hash_key +
-                sizeof(int)*(descriptor->capacity + 2)*descriptor->num_of_sort_key
+                sizeof(int)*(descriptor->capacity)*descriptor->num_of_sort_key
                 );
     return dlist;
 }
@@ -433,6 +456,39 @@ int dl_add_element(void* p)
     return position;
 }
 
+bool add_hashkey_for_element(void* p)
+{
+    //TODO: Insert hash data
+    return true;
+}
+
+bool insert_to_sorttable(struct KeyInShm *key, int *table, const void* data, int element_pos, int element_size)
+{
+    if(key->load_count == 0) {
+        table[0] = element_pos;
+        key->load_count ++;
+        return true;
+    }
+    int begin = 0;
+    int end = key->load_count - 1;
+    int cur = (end - begin) / 2;
+}
+
+bool add_sortkey_for_element(void* p, int element_pos, int element_size)
+{
+    //TODO: Insert sort data
+    struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
+    void* p_data = getp_data(p);
+    for(int i=0; i<descriptor->num_of_sort_key; i++) {
+        struct KeyInShm *p_sort_key = getp_sortkey(p, i);
+        int * p_sort_table = getp_sort_table(p, i);
+        if(!insert_to_sorttable(p_sort_key, p_sort_table, p_data, element_pos, element_size)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int add_element(void* p, void* data, size_t size)
 {
     struct ShmDescriptor* descriptor = getp_shm_descriptor(p);
@@ -442,12 +498,19 @@ int add_element(void* p, void* data, size_t size)
                  descriptor->capacity);
         return -1;
     }
+    //Doubly Linked List use two element for used_head and unused_head from position 0
+    //So data position shoule be dl_list position-2
+    int data_position = position - 2;
     descriptor->load_count ++;
     void* p_data = getp_data(p);
-    void* p_to = p_data + (size * position);
+    void* p_to = p_data + (size * data_position);
     memcpy(p_to, data, size);
 
-    //TODO: Insert hash data
-    //TODO: Insert sort data
+    if(!(add_hashkey_for_element(p) && add_sortkey_for_element(p, data_position, size))) {
+        //TODO:
+        //If fail on crate key for element, we have to remove it from doubly linked list,
+        //clear data(if we want clean memory), and clear already added keys before return.
+        return -1;
+    }
     return position;
 }
