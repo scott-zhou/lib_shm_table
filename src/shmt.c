@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
 int get_hash_prime_number(int table_capacity)
 {

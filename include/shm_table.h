@@ -23,6 +23,45 @@ namespace lib_shm_table {
         kExisted = 2
     };
 
+    class Locker{
+        enum Type{
+            kNone, // Don't use kNone to init a locker!!
+            kRead,
+            kWrite
+        };
+    public:
+        Locker(bool use_locker, Type type, void* shm_p, int sem_id)
+            : use_locker_(use_locker), cur_locker_type_(type), p(shm_p), id(sem_id)
+        {
+            if(use_locker && kWrite == type) {
+                if(!write_lock(shm_p, sem_id)) {
+                    throw kNone;
+                }
+            }
+            else if(use_locker && kRead == type) {
+                if(!read_lock(shm_p, sem_id)) {
+                    throw kNone;
+                }
+            }
+            else if(use_locker) {
+                throw kNone;
+            }
+        }
+        ~Locker() {
+            if(use_locker_ && kWrite == cur_locker_type_) {
+                write_unlock(p, id);
+            }
+            else if(use_locker_ && kRead == cur_locker_type_) {
+                read_unlock(p, id);
+            }
+        }
+    private:
+        bool use_locker_;
+        Type cur_locker_type_;
+        void* p;
+        int id;
+    };
+
 
 // Template class for table in shared memory. Sample usage:
 //    struct OwnStruct {
@@ -249,13 +288,8 @@ bool Table<T>::isUseLock()
 
 template <class T>
 int Table<T>::insert(T& data){
-    int index = -1;
-    if(!write_lock(shm_p_, sem_id_)) {
-        return index;
-    }
-    index = add_element(shm_p_, &data, sizeof(T));
-    write_unlock(shm_p_, sem_id_);
-    return index;
+    Locker locker(isUseLock(), Locker::kWrite, shm_p_, sem_id_);
+    return add_element(shm_p_, &data, sizeof(T));
 }
 
 } //namespace lib_shm_table
